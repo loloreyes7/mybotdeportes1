@@ -1,4 +1,5 @@
 name: Ejecutar Bot de Deportes
+
 on:
   schedule:
     - cron: '*/30 * * * *'
@@ -23,4 +24,4 @@ jobs:
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
-        run: python bot_deportes.py
+        run: python bot_telegram.py
