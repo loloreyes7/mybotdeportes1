@@ -1,26 +1,24 @@
 name: Ejecutar Bot de Deportes
-
 on:
-  schedule:
-    - cron: '*/30 * * * *'
+  push:
   workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *' # Se ejecuta automáticamente cada hora
 
 jobs:
-  build:
+  run-bot:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Setup Python
+      - uses: actions/checkout@v3
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
-
-      - name: Instalar dependencias
-        run: pip install -r requirements.txt
-
-      - name: Ejecutar Bot
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          pip install python-telegram-bot playwright
+          playwright install chromium
+      - name: Run bot
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
