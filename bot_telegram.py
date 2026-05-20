@@ -9,22 +9,26 @@ URL = "https://www.fctv33hd.skin/es"
 
 async def main():
     async with async_playwright() as p:
+        # Lanzamos con un perfil que parece más humano
         browser = await p.chromium.launch()
-        page = await browser.new_page()
-        # Entramos en la web y esperamos a que cargue el contenido
-        await page.goto(URL, wait_until="networkidle")
+        context = await browser.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        page = await context.new_page()
         
-        # Esperamos a que los elementos del partido estén visibles
         try:
-            await page.wait_for_selector(".cp-link", timeout=10000)
+            await page.goto(URL, wait_until="domcontentloaded", timeout=60000)
             
-            # Extraemos texto y links
+            # Esperamos 30 segundos en lugar de 10
+            await page.wait_for_selector(".cp-link", timeout=30000)
+            
             eventos = await page.eval_on_selector_all(".cp-link", """elements => elements.map(e => ({
                 texto: e.innerText,
                 link: e.href
             }))""")
             
-            mensaje = "📅 **Agenda Deportiva (Actualizada):**\n\n"
+            if not eventos:
+                raise Exception("No se encontraron elementos con clase .cp-link")
+
+            mensaje = "📅 **Agenda Deportiva (Detectada):**\n\n"
             for e in eventos[:6]:
                 mensaje += f"🔹 {e['texto']}\n🔗 {e['link']}\n\n"
                 
