@@ -1,41 +1,40 @@
 import os
-import requests
-from telegram import Bot
 import asyncio
+from telegram import Bot
+from playwright.async_api import async_playwright
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-
-# Esta es la dirección donde la web suele buscar los datos de los partidos
-# Si esta URL no responde, el bot te avisará.
-API_URL = "https://www.fctv33hd.skin/api/events" 
+URL = "https://www.fctv33hd.skin/es"
 
 async def main():
-    bot = Bot(token=TOKEN)
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    
-    try:
-        # Intentamos obtener los datos directamente
-        response = requests.get(API_URL, headers=headers)
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        page = await browser.new_page()
+        # Entramos en la web y esperamos a que cargue el contenido
+        await page.goto(URL, wait_until="networkidle")
         
-        if response.status_code == 200:
-            data = response.json()
-            mensaje = "📅 **Agenda Deportiva de Hoy:**\n\n"
+        # Esperamos a que los elementos del partido estén visibles
+        try:
+            await page.wait_for_selector(".cp-link", timeout=10000)
             
-            # Aquí asumimos que recibimos una lista de partidos
-            for evento in data[:8]: # Los próximos 8 partidos
-                hora = evento.get('time', 'Hora no definida')
-                nombre = evento.get('name', 'Evento')
-                link = evento.get('link', '#')
-                mensaje += f"🕒 {hora} - {nombre}\n🔗 {link}\n\n"
+            # Extraemos texto y links
+            eventos = await page.eval_on_selector_all(".cp-link", """elements => elements.map(e => ({
+                texto: e.innerText,
+                link: e.href
+            }))""")
             
+            mensaje = "📅 **Agenda Deportiva (Actualizada):**\n\n"
+            for e in eventos[:6]:
+                mensaje += f"🔹 {e['texto']}\n🔗 {e['link']}\n\n"
+                
+            bot = Bot(token=TOKEN)
             await bot.send_message(chat_id=CHAT_ID, text=mensaje, parse_mode='Markdown')
-        else:
-            await bot.send_message(chat_id=CHAT_ID, text="No pude conectar con el servidor de datos. La web podría haber cambiado su estructura.")
             
-    except Exception as e:
-        print(f"Error: {e}")
-        await bot.send_message(chat_id=CHAT_ID, text="Hubo un error técnico al leer la cartelera.")
+        except Exception as e:
+            print(f"Error extrayendo datos: {e}")
+            
+        await browser.close()
 
 if __name__ == "__main__":
     asyncio.run(main())
