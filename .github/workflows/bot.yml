@@ -3,7 +3,7 @@ on:
   push:
   workflow_dispatch:
   schedule:
-    - cron: '0 * * * *' # Se ejecuta automáticamente cada hora
+    - cron: '0 * * * *'
 
 jobs:
   run-bot:
@@ -16,8 +16,8 @@ jobs:
           python-version: '3.10'
       - name: Install dependencies
         run: |
-          pip install python-telegram-bot playwright
-          playwright install chromium
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4 python-telegram-bot
       - name: Run bot
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
