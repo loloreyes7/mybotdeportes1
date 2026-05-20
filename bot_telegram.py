@@ -6,7 +6,8 @@ from bs4 import BeautifulSoup
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-URL = "https://jack33eo.mp7786j2ncsusov57general.ru/es/basketball.html" # Ajustado a baloncesto
+# Usamos la página principal donde están todos los deportes
+URL = "https://www.fctv33hd.skin/es"
 
 async def main():
     bot = Bot(token=TOKEN)
@@ -16,28 +17,31 @@ async def main():
         response = requests.get(URL, headers=headers)
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Buscamos los bloques que contienen la información (usando tu selector)
-        # Buscamos elementos que tengan la clase 'cp-link'
-        partidos = soup.select('.cp-link')
+        # Buscamos elementos que contienen enlaces a eventos (buscamos patrones comunes de enlaces)
+        # En esta web, los eventos suelen estar dentro de etiquetas 'a' con clases específicas
+        enlaces = soup.find_all('a', href=True)
         
-        if not partidos:
-            await bot.send_message(chat_id=CHAT_ID, text="No encontré partidos activos en este momento.")
-            return
+        mensaje = "📺 **Cartelera Deportiva Global:**\n\n"
+        encontrados = []
 
-        mensaje = "🏀 **Partidos de Baloncesto en Vivo:**\n\n"
-        
-        for p in partidos[:5]: # Los 5 primeros
-            texto = p.get_text(strip=True)
-            link_tag = p.find_parent('a') # Buscamos el enlace padre
-            link = link_tag['href'] if link_tag and link_tag.has_attr('href') else "Sin enlace"
+        for a in enlaces:
+            href = a['href']
+            # Filtramos enlaces que parecen ser partidos (que contengan 'football', 'basketball', etc)
+            if any(deporte in href for deporte in ['football', 'basketball', 'tennis', 'volleyball']):
+                texto = a.get_text(strip=True)
+                if texto and texto not in encontrados:
+                    full_link = "https://www.fctv33hd.skin" + (href if href.startswith('/') else f"/{href}")
+                    mensaje += f"🔹 {texto}\n🔗 {full_link}\n\n"
+                    encontrados.append(texto)
             
-            # Aseguramos que el enlace tenga el dominio completo
-            if link.startswith('/'):
-                link = "https://jack33eo.mp7786j2ncsusov57general.ru" + link
-            
-            mensaje += f"🔹 {texto}\n🔗 {link}\n\n"
+            # Limitamos a 6 eventos para que no sea un mensaje infinito
+            if len(encontrados) >= 6:
+                break
 
-        await bot.send_message(chat_id=CHAT_ID, text=mensaje, parse_mode='Markdown')
+        if encontrados:
+            await bot.send_message(chat_id=CHAT_ID, text=mensaje, parse_mode='Markdown')
+        else:
+            await bot.send_message(chat_id=CHAT_ID, text="No pude detectar eventos en la página principal ahora mismo.")
             
     except Exception as e:
         print(f"Error técnico: {e}")
