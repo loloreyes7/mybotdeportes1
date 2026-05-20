@@ -2,35 +2,31 @@ import os
 import requests
 from telegram import Bot
 import asyncio
-from urllib.parse import urlparse
+from bs4 import BeautifulSoup
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-
-# Usamos una lista para construir la URL, esto elimina cualquier \n oculto
-url_parts = [
-    "https://jack33eo.mp7786j2ncsusov57",
-    "general.ru/es/football/conmebol-copa-libertadores-4375787/",
-    "rosario-central-vs-universidad-central-de-venezuela.html?icg=RVM&ilang=es"
-]
-URL = "".join(url_parts)
+URL = "https://jack33eo.mp7786j2ncsusov57general.ru/es/football/conmebol-copa-libertadores-4375787/rosario-central-vs-universidad-central-de-venezuela.html?icg=RVM&ilang=es"
 
 async def main():
     bot = Bot(token=TOKEN)
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    
     try:
-        # Validación: esto fallará antes de intentar conectar si la URL es inválida
-        result = urlparse(URL)
-        if not all([result.scheme, result.netloc]):
-            print("La URL generada es inválida.")
-            return
-
-        headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(URL, headers=headers)
-        
-        if response.status_code == 200:
-            await bot.send_message(chat_id=CHAT_ID, text="✅ ¡Conexión exitosa!")
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Buscamos los equipos usando los selectores que encontraste
+        home = soup.select_one('.home-team')
+        away = soup.select_one('.away-team')
+
+        if home and away:
+            nombre_home = home.get_text(strip=True)
+            nombre_away = away.get_text(strip=True)
+            mensaje = f"⚽ **Partido detectado:**\n{nombre_home} vs {nombre_away}"
+            await bot.send_message(chat_id=CHAT_ID, text=mensaje, parse_mode='Markdown')
         else:
-            print(f"Error HTTP: {response.status_code}")
+            await bot.send_message(chat_id=CHAT_ID, text="No pude encontrar los nombres de los equipos. El diseño de la web podría haber cambiado.")
             
     except Exception as e:
         print(f"Error: {e}")
