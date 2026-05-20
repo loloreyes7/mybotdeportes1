@@ -1,36 +1,33 @@
 import os
 import requests
 from telegram import Bot
-from bs4 import BeautifulSoup
 import asyncio
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-URL = "https://futbol-libre.su/"
+# API oficial del SAIH Guadalquivir para puntos de control
+API_URL = "https://www.chguadalquivir.es/saih-web/api/estaciones"
 
 async def main():
     bot = Bot(token=TOKEN)
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    }
-    
     try:
-        response = requests.get(URL, headers=headers, timeout=15)
-        soup = BeautifulSoup(response.text, 'html.parser')
+        # Consultamos los datos reales
+        response = requests.get(API_URL, timeout=10)
+        datos = response.json()
         
-        # Ejemplo: buscamos enlaces de partidos
-        links = soup.find_all('a', href=True)
-        mensaje = "⚽ **Cartelera detectada:**\n\n"
+        mensaje = "🌊 **Estado de los Ríos - SAIH Guadalquivir:**\n\n"
         
-        for a in links[:5]:
-            texto = a.get_text(strip=True)
-            if len(texto) > 10:
-                mensaje += f"🔹 {texto}\n"
+        # Filtramos los datos de los 5 puntos de control principales
+        for estacion in datos[:5]:
+            nombre = estacion.get('nombre', 'Desconocido')
+            caudal = estacion.get('caudal', 'N/A')
+            nivel = estacion.get('nivel', 'N/A')
+            mensaje += f"📍 {nombre}\n   💧 Caudal: {caudal} m³/s\n   📏 Nivel: {nivel} m\n\n"
         
-        await bot.send_message(chat_id=CHAT_ID, text=mensaje)
+        await bot.send_message(chat_id=CHAT_ID, text=mensaje, parse_mode='Markdown')
             
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error al obtener datos: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())
