@@ -1,51 +1,36 @@
 import os
 import requests
 from telegram import Bot
-import asyncio
 from bs4 import BeautifulSoup
+import asyncio
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-
-# Lista de webs a monitorear
-WEBS = [
-    "https://futbol-libre.su/",
-    "https://golxu.com/",
-    "https://ppvtv.top/"
-]
+URL = "https://futbol-libre.su/"
 
 async def main():
     bot = Bot(token=TOKEN)
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://www.google.com/'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
     
-    mensaje_final = "⚽ **Cartelera Deportiva Detectada:**\n\n"
-    encontrados = 0
-
-    for url in WEBS:
-        try:
-            response = requests.get(url, headers=headers, timeout=10)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, 'html.parser')
-                # Buscamos enlaces que contengan partidos (patrón genérico)
-                links = soup.find_all('a', href=True)
-                
-                for a in links[:3]: # Tomamos los 3 primeros de cada web
-                    texto = a.get_text(strip=True)
-                    if len(texto) > 15: # Filtramos menús cortos
-                        link = a['href']
-                        if not link.startswith('http'): link = url.rstrip('/') + link
-                        mensaje_final += f"🔹 {texto}\n🔗 {link}\n\n"
-                        encontrados += 1
-        except:
-            continue # Si una web falla, intentamos la siguiente sin detenernos
-
-    if encontrados > 0:
-        await bot.send_message(chat_id=CHAT_ID, text=mensaje_final, parse_mode='Markdown')
-    else:
-        await bot.send_message(chat_id=CHAT_ID, text="No pude extraer información. Las webs tienen sistemas de seguridad activos.")
+    try:
+        response = requests.get(URL, headers=headers, timeout=15)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Ejemplo: buscamos enlaces de partidos
+        links = soup.find_all('a', href=True)
+        mensaje = "⚽ **Cartelera detectada:**\n\n"
+        
+        for a in links[:5]:
+            texto = a.get_text(strip=True)
+            if len(texto) > 10:
+                mensaje += f"🔹 {texto}\n"
+        
+        await bot.send_message(chat_id=CHAT_ID, text=mensaje)
+            
+    except Exception as e:
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())
