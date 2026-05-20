@@ -6,8 +6,12 @@ import asyncio
 # Obtiene los secretos
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
-# Definimos la URL de forma limpia
-URL = "https://jack33eo.mp7786j2ncsusov57general.ru/es/football/conmebol-copa-libertadores-4375787/rosario-central-vs-universidad-central-de-venezuela.html?icg=RVM&ilang=es"
+
+# Construimos la URL por partes para evitar el error de salto de línea
+parte1 = "https://jack33eo.mp7786j2ncsusov57general.ru/es/football/"
+parte2 = "conmebol-copa-libertadores-4375787/rosario-central-vs-universidad-central-de-venezuela.html"
+parte3 = "?icg=RVM&ilang=es"
+URL = parte1 + parte2 + parte3
 
 async def main():
     if not TOKEN or not CHAT_ID:
@@ -16,12 +20,14 @@ async def main():
 
     bot = Bot(token=TOKEN)
     try:
-        # Usamos una cabecera para que la web no rechace al bot
+        # User-Agent para parecer un navegador real
         headers = {'User-Agent': 'Mozilla/5.0'}
+        print(f"Intentando conectar a: {URL}")
+        
         response = requests.get(URL, headers=headers)
         
         if response.status_code == 200:
-            await bot.send_message(chat_id=CHAT_ID, text=f"✅ Bot conectado correctamente.\nEstado de la web: {response.status_code}")
+            await bot.send_message(chat_id=CHAT_ID, text="✅ ¡Conexión exitosa con la web!")
             print("Mensaje enviado correctamente.")
         else:
             print(f"La web respondió con código: {response.status_code}")
