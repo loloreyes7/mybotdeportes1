@@ -1,33 +1,23 @@
-import os
-import requests
-from telegram import Bot
-import asyncio
+import fitz  # PyMuPDF
+from telegram import Update
+from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
-TOKEN = os.getenv("TELEGRAM_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
-# API oficial del SAIH Guadalquivir para puntos de control
-API_URL = "https://www.chguadalquivir.es/saih-web/api/estaciones"
+async def handle_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Descargamos el archivo enviado
+    file = await context.bot.get_file(update.message.document.file_id)
+    await file.download_to_drive("libro.pdf")
+    
+    # Extraemos texto con técnica de "lectura por bloques" (método voraz)
+    doc = fitz.open("libro.pdf")
+    texto_resumido = ""
+    for page in doc[:10]:  # Empezamos leyendo las primeras 10 páginas
+        texto_resumido += page.get_text()
+    
+    # Aquí aplicamos la lógica de filtrado del método voraz
+    # (Por ahora, una síntesis simple; podemos mejorarla)
+    resumen = "🎯 **Análisis Voraz (Resumen inicial):**\n" + texto_resumido[:500] 
+    
+    await update.message.reply_text(resumen)
 
-async def main():
-    bot = Bot(token=TOKEN)
-    try:
-        # Consultamos los datos reales
-        response = requests.get(API_URL, timeout=10)
-        datos = response.json()
-        
-        mensaje = "🌊 **Estado de los Ríos - SAIH Guadalquivir:**\n\n"
-        
-        # Filtramos los datos de los 5 puntos de control principales
-        for estacion in datos[:5]:
-            nombre = estacion.get('nombre', 'Desconocido')
-            caudal = estacion.get('caudal', 'N/A')
-            nivel = estacion.get('nivel', 'N/A')
-            mensaje += f"📍 {nombre}\n   💧 Caudal: {caudal} m³/s\n   📏 Nivel: {nivel} m\n\n"
-        
-        await bot.send_message(chat_id=CHAT_ID, text=mensaje, parse_mode='Markdown')
-            
-    except Exception as e:
-        print(f"Error al obtener datos: {e}")
-
-if __name__ == "__main__":
-    asyncio.run(main())
+# Configuración del bot para recibir documentos
+# ... (código de inicialización del bot)
